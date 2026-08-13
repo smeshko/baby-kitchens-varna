@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Детски кухни — Варна</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EBE7DE; --surface:#FFFFFF; --surface-2:#F7F5F0;
+  --ink:#22201C; --soft:#6C685F; --faint:#9C968B;
+  --line:#EBE7DE; --edge:#E0DACE;
+  --accent:#1F5F45; --accent-soft:#1F5F4514; --warm:#B85C31;
+  --k1:#B85C31; --k2:#2C6E7E; --k3:#6B5590;
+  --shadow:0 1px 2px rgba(40,32,20,.04), 0 8px 24px -14px rgba(40,32,20,.16);
+  --r:14px;
+}
+:root[data-theme="dark"]{
+  --bg:#15161A; --surface:#1E2025; --surface-2:#24262C;
+  --ink:#E9E7E2; --soft:#9E9A93; --faint:#77736C;
+  --line:#2A2C32; --edge:#32343B;
+  --accent:#7EC3A0; --accent-soft:#7EC3A01a; --warm:#E29065;
+  --k1:#E29065; --k2:#61AFC0; --k3:#A491D6;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -18px rgba(0,0,0,.8);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#15161A; --surface:#1E2025; --surface-2:#24262C;
+    --ink:#E9E7E2; --soft:#9E9A93; --faint:#77736C;
+    --line:#2A2C32; --edge:#32343B;
+    --accent:#7EC3A0; --accent-soft:#7EC3A01a; --warm:#E29065;
+    --k1:#E29065; --k2:#61AFC0; --k3:#A491D6;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -18px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Manrope,system-ui,sans-serif; font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+.wrap{max-width:1520px; margin:0 auto; padding:2.25rem 1.5rem 4.5rem}
+
+/* ---------- masthead ---------- */
+header{display:flex; align-items:flex-end; justify-content:space-between; gap:1.25rem; flex-wrap:wrap; margin-bottom:1.5rem}
+h1{
+  font-family:Literata,Georgia,serif; font-weight:600; font-size:clamp(1.5rem,2.5vw,2.1rem);
+  letter-spacing:-.025em; line-height:1.05;
+}
+h1 em{font-style:italic; font-weight:400; color:var(--accent)}
+.sub{font-size:.78rem; color:var(--soft); margin-top:.4rem; font-weight:500}
+.tools{display:flex; gap:.45rem; align-items:center; flex-wrap:wrap}
+button{
+  font:inherit; font-size:.8rem; font-weight:600; color:var(--soft); background:var(--surface);
+  border:1px solid transparent; border-radius:9px; padding:.45rem .8rem; cursor:pointer;
+  transition:color .15s, background .15s, box-shadow .15s; white-space:nowrap;
+}
+button:hover{color:var(--ink)}
+button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.seg{display:flex; background:var(--surface); border-radius:10px; padding:3px; gap:2px}
+.seg button{border-radius:7px; padding:.38rem .75rem; background:transparent}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.icon{width:34px; padding:.45rem 0; text-align:center}
+
+/* ---------- legend ---------- */
+.legend{display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; margin-bottom:1.1rem}
+.legend .lbl{font-size:.72rem; color:var(--faint); font-weight:600; margin-right:.2rem}
+.chip{
+  --c:var(--soft);
+  display:inline-flex; align-items:center; gap:.3rem; font-size:.715rem; font-weight:600;
+  padding:.16rem .55rem .18rem; border-radius:999px; white-space:nowrap; line-height:1.45;
+  color:color-mix(in srgb, var(--c) 78%, var(--ink));
+  background:color-mix(in srgb, var(--c) 15%, var(--surface));
+}
+.chip::before{content:""; width:5px; height:5px; border-radius:50%; background:var(--c); flex:none}
+button.chip{cursor:pointer; font-family:inherit; border:0}
+button.chip[aria-pressed="true"]{background:var(--c); color:#fff}
+button.chip[aria-pressed="true"]::before{background:rgba(255,255,255,.85)}
+
+/* ---------- kitchen header ---------- */
+.kbar{
+  position:sticky; top:0; z-index:8; display:grid; gap:.75rem;
+  grid-template-columns:5.5rem repeat(3,minmax(0,1fr));
+  padding:.85rem 0 .7rem; margin-bottom:.25rem;
+  background:linear-gradient(var(--bg) 78%, transparent);
+}
+.kbar .kh{padding:0 .25rem}
+.kn{
+  font-family:Literata,serif; font-weight:600; font-size:.93rem; letter-spacing:-.012em;
+  display:flex; align-items:center; gap:.4rem; line-height:1.25;
+}
+.kn::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--kc); flex:none}
+.kmeta{font-size:.68rem; color:var(--faint); margin-top:.2rem; font-weight:500; padding-left:1.1rem}
+
+/* ---------- day ---------- */
+.dayhead{
+  display:flex; align-items:baseline; gap:.55rem; padding:1.4rem .35rem .55rem;
+  width:100%; background:none; border:0; border-radius:0; cursor:pointer;
+  font:inherit; color:inherit; text-align:left; white-space:normal;
+}
+.dayhead:hover .dnum,.dayhead:hover .dw{color:var(--accent)}
+.dnum{font-family:Literata,serif; font-weight:600; font-size:1.02rem; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.dw{font-size:.76rem; font-weight:600; color:var(--soft)}
+.dtag{
+  font-size:.64rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent); background:var(--accent-soft); padding:.14rem .45rem; border-radius:999px;
+}
+.dcount{
+  margin-left:auto; font-size:.72rem; font-weight:600; color:var(--faint);
+  opacity:0; transition:opacity .2s;
+}
+.daysec.collapsed .dcount{opacity:1}
+.chev{
+  width:1.1rem; height:1.1rem; flex:none; color:var(--faint); align-self:center;
+  transition:transform .28s ease; margin-left:.55rem;
+}
+.daysec.collapsed .chev{transform:rotate(-90deg)}
+.dayhead.is-today .dnum,.dayhead.is-today .dw{color:var(--accent)}
+
+/* 0fr -> 1fr animates cleanly without measuring heights */
+.cardwrap{display:grid; grid-template-rows:1fr; transition:grid-template-rows .28s ease}
+.daysec.collapsed .cardwrap{grid-template-rows:0fr}
+.cardwrap > .card{min-height:0; overflow:hidden}
+.daysec.collapsed .card{box-shadow:none}
+
+.card{
+  background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow);
+  overflow:hidden; transition:box-shadow .2s;
+}
+.card.is-today{box-shadow:var(--shadow), 0 0 0 1.5px var(--accent)}
+.row{display:grid; grid-template-columns:5.5rem repeat(3,minmax(0,1fr)); gap:.75rem}
+/* Divider on the row, not its children: the column gap would otherwise chop the
+   rule into disconnected segments. */
+.row + .row{border-top:1px solid var(--line)}
+.slot{
+  padding:1rem .5rem 1.1rem 1.15rem; font-size:.7rem; font-weight:700; color:var(--faint);
+  letter-spacing:.02em;
+}
+.slot span{display:block; font-size:.66rem; font-weight:600; color:var(--accent); margin-bottom:.1rem}
+.cell{padding:1rem .5rem 1.1rem 0; min-width:0}
+.cell:last-child{padding-right:1.15rem}
+
+.nm{font-family:Literata,serif; font-size:.97rem; font-weight:600; line-height:1.3; letter-spacing:-.008em}
+.chips{display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.4rem}
+.ing{margin-top:.45rem; font-size:.775rem; color:var(--soft); line-height:1.55}
+.ing b{color:var(--ink); font-weight:600}
+body.compact .ing{display:none}
+.meta{font-size:.7rem; color:var(--faint); margin-top:.45rem; font-weight:600; font-variant-numeric:tabular-nums}
+.dash{color:var(--faint); opacity:.55}
+.rest{font-size:.8rem; color:var(--faint); font-style:italic; font-family:Literata,serif}
+.imglink{display:inline-block; margin-top:.3rem; font-size:.75rem; color:var(--accent); font-weight:600}
+.badge{
+  font-size:.62rem; font-weight:700; padding:.1rem .4rem; border-radius:999px; margin-left:.4rem;
+  letter-spacing:.03em; text-transform:uppercase;
+}
+.badge.stale{color:#8a6d1c; background:#8a6d1c1f}
+.badge.err{color:#a8433a; background:#a8433a1f}
+
+body.watching .cell:not(.hit) .nm,
+body.watching .cell:not(.hit) .ing,
+body.watching .cell:not(.hit) .chips{opacity:.3}
+body.watching .cell.hit .nm{color:var(--accent)}
+
+.loading{padding:4rem; text-align:center; color:var(--faint); font-style:italic; font-family:Literata,serif}
+.foot{margin-top:2rem; font-size:.72rem; color:var(--faint); display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; font-weight:500}
+a{color:var(--accent)}
+
+@media (max-width:600px){
+  header{gap:.9rem}
+  .tools{width:100%}
+  .seg{flex:1}
+  .seg button{flex:1; text-align:center}
+  #compact{flex:1}
+}
+@media (max-width:980px){
+  .wrap{padding:1.5rem 1rem 3rem}
+  .kbar{display:none}
+  .row{grid-template-columns:1fr; gap:0}
+  .slot{padding:.9rem 1.15rem .1rem; display:flex; gap:.4rem; align-items:baseline}
+  .slot span{margin:0}
+  .cell{padding:.55rem 1.15rem .8rem}
+  .cell:last-child{padding-right:1.15rem}
+  .cell + .cell{border-top:1px solid var(--line); padding-top:.8rem}
+  .cell::before{
+    content:attr(data-k); display:flex; align-items:center; gap:.35rem;
+    font-size:.68rem; font-weight:700; color:var(--kc); margin-bottom:.3rem;
+  }
+}
+@media (prefers-reduced-motion:no-preference){
+  @keyframes rise{from{opacity:0; transform:translateY(5px)} to{opacity:1; transform:none}}
+  .daysec{animation:rise .4s both}
+}
+@media (prefers-reduced-motion:reduce){
+  .cardwrap,.chev,.dcount{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Детски кухни <em>Варна</em></h1>
+      <div class="sub" id="range">зарежда…</div>
+    </div>
+    <div class="tools">
+      <div class="seg" id="weeks">
+        <button data-week="0" aria-pressed="true">Тази седмица</button>
+        <button data-week="1" aria-pressed="false">Следваща</button>
+      </div>
+      <button id="compact" aria-pressed="false">Без съставки</button>
+      <button id="foldall">Свий всички</button>
+      <button id="refresh" class="icon" title="Обнови">↻</button>
+      <button id="theme" class="icon" title="Тема">◐</button>
+    </div>
+  </header>
+
+  <div class="legend" id="legend"><span class="lbl">Алергени</span></div>
+  <div id="out"><div class="loading">Зарежда менютата…</div></div>
+
+  <div class="foot">
+    <span id="stamp"></span>
+    <span>Данните са от сайтовете на кухните. Проверявай при алергия.</span>
+  </div>
+</div>
+
+<script>
+// Hues are kept far apart on purpose: milk (blue) and fish (violet) used to be
+// two near-identical teals and were impossible to tell apart at chip size.
+const AL = {
+  MILK:{bg:"Мляко",c:"#3d7ea6"}, EGG:{bg:"Яйца",c:"#c08f22"}, GLUTEN:{bg:"Глутен",c:"#b8632c"},
+  SUGAR:{bg:"Захар",c:"#c2557f"}, FISH:{bg:"Риба",c:"#7d55b0"},
+  NUTS:{bg:"Ядки",c:"#9c5f3c"}, PEANUT:{bg:"Фъстъци",c:"#9c5f3c"},
+  SESAME:{bg:"Сусам",c:"#a08334"}, MUSTARD:{bg:"Синап",c:"#b09024"},
+  SULPHITES:{bg:"Сулфити",c:"#7d7d7d"}, CRUSTACEAN:{bg:"Ракообразни",c:"#a8564e"},
+  MOLLUSC:{bg:"Мекотели",c:"#a8564e"}, LUPIN:{bg:"Лупина",c:"#8a7b3f"}
+};
+const ORDER = ["furisto","vipbebe","opkdh"];
+const KC = {furisto:"var(--k1)", vipbebe:"var(--k2)", opkdh:"var(--k3)"};
+const SLOTS = [{n:1,t:"Супа"},{n:2,t:"Основно"},{n:3,t:"Десерт"}];
+const watch = new Set();
+let DATA = null, week = 0, visibleDates = [];
+
+/* Collapse state. Days before today start collapsed - they are still there if you
+   want them, but they are not what you open the page for. Manual toggles persist,
+   pruned so old dates cannot pile up in storage. */
+const CKEY = "collapsedDays";
+let collapsed = new Set(), touched = new Set();
+try{
+  const raw = JSON.parse(localStorage.getItem(CKEY) || "{}");
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-14);
+  const keep = d => new Date(d+"T00:00:00") >= cutoff;
+  (raw.collapsed||[]).filter(keep).forEach(d=>collapsed.add(d));
+  (raw.touched||[]).filter(keep).forEach(d=>touched.add(d));
+}catch{ /* corrupt storage is not worth failing over */ }
+
+function saveCollapsed(){
+  try{
+    localStorage.setItem(CKEY, JSON.stringify({
+      collapsed:[...collapsed], touched:[...touched]
+    }));
+  }catch{ /* private mode / quota - state just won't persist */ }
+}
+
+function isCollapsed(ds, todayIso){
+  if(touched.has(ds)) return collapsed.has(ds);
+  return ds < todayIso;            // ISO dates compare lexicographically
+}
+
+const el=(t,c,h)=>{const n=document.createElement(t); if(c)n.className=c; if(h!==undefined)n.innerHTML=h; return n;};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// Local calendar date, NOT toISOString(): in UTC+3 a local midnight serialises
+// back to the previous day, which shifted the whole week onto Sunday.
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+function chip(tok, asButton){
+  const a = AL[tok] || {bg:tok, c:"#888"};
+  const n = el(asButton?"button":"span", "chip", a.bg);
+  n.style.setProperty("--c", a.c);
+  if(asButton){ n.setAttribute("aria-pressed", watch.has(tok)); n.dataset.tok = tok; }
+  return n;
+}
+
+function buildLegend(){
+  const box = document.getElementById("legend");
+  box.querySelectorAll("button").forEach(b=>b.remove());
+  const present = new Set();
+  (DATA?.sources||[]).forEach(s=>s.days.forEach(d=>d.items.forEach(i=>i.allergens.forEach(a=>present.add(a)))));
+  [...present].sort((a,b)=>(AL[a]?.bg||a).localeCompare(AL[b]?.bg||b,"bg")).forEach(tok=>{
+    const c = chip(tok, true);
+    c.onclick = ()=>{ watch.has(tok)?watch.delete(tok):watch.add(tok); render(); };
+    box.appendChild(c);
+  });
+}
+
+/* Items are keyed by position so meal 1 of every kitchen lands on one line.
+   Anything without a usable position is appended to the last slot. */
+function slotMap(day){
+  const m = {1:[],2:[],3:[]};
+  (day?.items||[]).forEach(it=>{
+    const p = (it.position>=1 && it.position<=3) ? it.position : 3;
+    m[p].push(it);
+  });
+  return m;
+}
+
+function fillCell(cell, items, day, slotNo){
+  if(!day){ cell.appendChild(el("div","dash","—")); return; }
+  if(!items.length){
+    if(slotNo===1 && day.note && !/лв|€/.test(day.note)){
+      cell.appendChild(el("div","rest", esc(day.note)));
+      if(day.image_url){
+        const a = el("a","imglink","виж изображението"); a.href=day.image_url; a.target="_blank";
+        cell.appendChild(a);
+      }
+    } else {
+      cell.appendChild(el("div","dash", slotNo===1 && !day.items.length ? "—" : "·"));
+    }
+    return;
+  }
+  items.forEach(it=>{
+    if(it.allergens.some(a=>watch.has(a))) cell.classList.add("hit");
+    cell.appendChild(el("div","nm", esc(it.name)));
+    if(it.allergens.length){
+      const c = el("div","chips");
+      it.allergens.forEach(a=>c.appendChild(chip(a,false)));
+      cell.appendChild(c);
+    }
+    if(it.ingredients.length){
+      const marked = new Set(it.allergen_source_terms.map(s=>s.toLowerCase()));
+      cell.appendChild(el("div","ing",
+        it.ingredients.map(g=>marked.has(g.toLowerCase())?"<b>"+esc(g)+"</b>":esc(g)).join(", ")));
+    }
+    const meta = [it.portion, slotNo===1 && day.note && /лв|€/.test(day.note) ? day.note : null]
+      .filter(Boolean).join("   ·   ");
+    if(meta) cell.appendChild(el("div","meta", esc(meta)));
+  });
+}
+
+function render(){
+  if(!DATA) return;
+  document.body.classList.toggle("watching", watch.size>0);
+  buildLegend();
+  const out = document.getElementById("out");
+  out.innerHTML = "";
+
+  const byId = Object.fromEntries(DATA.sources.map(s=>[s.kitchen,s]));
+  const start = new Date(DATA.week_start+"T00:00:00");
+  const from = new Date(start); from.setDate(from.getDate()+week*7);
+  const dates = [...Array(7)].map((_,i)=>{const d=new Date(from); d.setDate(d.getDate()+i); return iso(d);});
+  visibleDates = dates;
+
+  // sticky kitchen bar
+  const kbar = el("div","kbar");
+  kbar.appendChild(el("div","kh"));
+  ORDER.forEach(k=>{
+    const s = byId[k], h = el("div","kh");
+    h.style.setProperty("--kc", KC[k]);
+    const t = el("div","kn", "<span>"+esc(s?s.label:k)+"</span>");
+    if(s?.stale) t.appendChild(el("span","badge stale","кеш"));
+    if(s && !s.ok) t.appendChild(el("span","badge err","грешка"));
+    h.appendChild(t);
+    const meta=[];
+    if(s?.coverage_note) meta.push(esc(s.coverage_note));
+    if(s?.fetched_at) meta.push("обн. "+new Date(s.fetched_at).toLocaleString("bg-BG",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}));
+    h.appendChild(el("div","kmeta", meta.join(" · ")));
+    kbar.appendChild(h);
+  });
+  out.appendChild(kbar);
+
+  const today = iso(new Date());
+  dates.forEach((ds,di)=>{
+    const dd = new Date(ds+"T00:00:00");
+    const isToday = ds===today;
+
+    const sec = el("div","daysec");
+    sec.style.animationDelay=(di*45)+"ms";
+    const shut = isCollapsed(ds, today);
+    if(shut) sec.classList.add("collapsed");
+
+    const head = el("button","dayhead"+(isToday?" is-today":""));
+    head.type = "button";
+    head.setAttribute("aria-expanded", String(!shut));
+    head.appendChild(el("span","dnum", String(dd.getDate()).padStart(2,"0")+"."+String(dd.getMonth()+1).padStart(2,"0")));
+    head.appendChild(el("span","dw", dd.toLocaleDateString("bg-BG",{weekday:"long"})));
+    if(isToday) head.appendChild(el("span","dtag","днес"));
+
+    const maps = ORDER.map(k=>({s:byId[k], day:byId[k]?.days.find(d=>d.date===ds)}));
+    const n = maps.reduce((a,m)=>a+(m.day?.items.length||0), 0);
+    head.appendChild(el("span","dcount", n ? n+" ястия" : "няма меню"));
+    head.appendChild(el("span","chev",
+      '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'));
+    head.onclick = ()=>{
+      const now = sec.classList.toggle("collapsed");
+      head.setAttribute("aria-expanded", String(!now));
+      touched.add(ds);
+      now ? collapsed.add(ds) : collapsed.delete(ds);
+      saveCollapsed();
+    };
+    sec.appendChild(head);
+
+    const card = el("div","card"+(isToday?" is-today":""));
+
+    SLOTS.forEach(slot=>{
+      const row = el("div","row");
+      row.appendChild(el("div","slot","<span>"+slot.n+"</span>"+slot.t));
+      maps.forEach(({s,day},ki)=>{
+        const c = el("div","cell");
+        c.style.setProperty("--kc", KC[ORDER[ki]]);
+        c.dataset.k = s ? s.label : ORDER[ki];
+        fillCell(c, slotMap(day)[slot.n], day, slot.n);
+        row.appendChild(c);
+      });
+      card.appendChild(row);
+    });
+    const wrap = el("div","cardwrap");
+    wrap.appendChild(card);
+    sec.appendChild(wrap);
+    out.appendChild(sec);
+  });
+
+  const t2 = new Date(from); t2.setDate(t2.getDate()+6);
+  document.getElementById("range").textContent =
+    from.toLocaleDateString("bg-BG",{day:"2-digit",month:"long"})+" — "+t2.toLocaleDateString("bg-BG",{day:"2-digit",month:"long",year:"numeric"});
+  document.getElementById("stamp").textContent = "Генерирано "+new Date(DATA.generated_at).toLocaleString("bg-BG");
+
+  const anyOpen = [...document.querySelectorAll(".daysec")].some(s=>!s.classList.contains("collapsed"));
+  document.getElementById("foldall").textContent = anyOpen ? "Свий всички" : "Разгъни всички";
+}
+
+async function load(force){
+  if(force) document.getElementById("out").innerHTML='<div class="loading">Обновява…</div>';
+  const r = await fetch("/api/menus?weeks=2"+(force?"&force=true":""));
+  DATA = await r.json();
+  render();
+}
+
+document.getElementById("weeks").onclick = e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  week = +b.dataset.week;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  render();
+};
+document.getElementById("compact").onclick = e=>{
+  const on = document.body.classList.toggle("compact");
+  e.currentTarget.setAttribute("aria-pressed", on);
+};
+document.getElementById("foldall").onclick = e=>{
+  const secs = [...document.querySelectorAll(".daysec")];
+  // If anything is still open, fold everything; otherwise unfold everything.
+  const fold = secs.some(s=>!s.classList.contains("collapsed"));
+  secs.forEach((s,i)=>{
+    s.classList.toggle("collapsed", fold);
+    const h = s.querySelector(".dayhead");
+    h.setAttribute("aria-expanded", String(!fold));
+    const ds = visibleDates[i];
+    if(!ds) return;
+    touched.add(ds);
+    fold ? collapsed.add(ds) : collapsed.delete(ds);
+  });
+  saveCollapsed();
+  e.currentTarget.textContent = fold ? "Разгъни всички" : "Свий всички";
+};
+document.getElementById("refresh").onclick = ()=>load(true);
+document.getElementById("theme").onclick = ()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur==="dark" ? "light" : cur==="light" ? "dark"
+    : (matchMedia("(prefers-color-scheme:dark)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+};
+
+const qs = new URLSearchParams(location.search);
+const saved = qs.get("theme") || localStorage.getItem("theme");
+if(saved) document.documentElement.setAttribute("data-theme", saved);
+if(qs.get("week")==="1"){
+  week = 1;
+  [...document.getElementById("weeks").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.week==="1"));
+}
+if(qs.get("compact")==="1"){
+  document.body.classList.add("compact");
+  document.getElementById("compact").setAttribute("aria-pressed","true");
+}
+(qs.get("watch")||"").split(",").filter(Boolean).forEach(t=>watch.add(t.toUpperCase()));
+load(false);
+</script>
+</body>
+</html>

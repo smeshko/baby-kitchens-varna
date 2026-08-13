@@ -1,0 +1,12 @@
+# uv-managed environment
+.venv/
+
+# python
+__pycache__/
+*.py[cod]
+
+# generated from com.ivo.kitchen.plist.template by `just install-service`
+com.ivo.kitchen.plist
+
+# macos
+.DS_Store

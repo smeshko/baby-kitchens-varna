@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template. `just install-service` substitutes __DIR__/__PORT__/__LOG__ and
+     writes the result to ~/Library/LaunchAgents/com.ivo.kitchen.plist -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ivo.kitchen</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__DIR__/run.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__DIR__</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>__LOG__</string>
+    <key>StandardErrorPath</key>
+    <string>__LOG__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>KITCHEN_PORT</key>
+        <string>__PORT__</string>
+        <!-- claude | codex -->
+        <key>KITCHEN_OCR_BACKEND</key>
+        <string>claude</string>
+        <!-- background revalidation interval, seconds -->
+        <key>KITCHEN_WARM_SECONDS</key>
+        <string>1800</string>
+    </dict>
+</dict>
+</plist>

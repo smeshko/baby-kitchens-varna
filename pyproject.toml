@@ -1,0 +1,26 @@
+[project]
+name = "baby-kitchens-varna"
+version = "0.1.0"
+description = "Compares the daily menus of three Varna children's kitchens, with allergens normalised across all three."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "pdfplumber>=0.11",
+    "beautifulsoup4>=4.12",
+    "pillow>=10.0",
+    "pydantic>=2.7",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
