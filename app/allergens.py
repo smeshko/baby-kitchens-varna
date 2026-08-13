@@ -54,7 +54,8 @@ _PATTERNS: list[tuple[str, str]] = [
                r"макарон\w*|грис\b|\bръж\w*|\bечемик\w*|\bспелта\b|кус-кус|булгур"),
     # Not an allergen - tracked because added sugar is worth seeing at a glance.
     # No source marks it, so this always comes from the secondary ingredient sweep.
-    ("SUGAR", r"\bзахар\w*|\bмед\b|глюкоз\w*|фруктоз\w*"),
+    # компот and сироп count: both are fruit packed in sugar syrup.
+    ("SUGAR", r"\bзахар\w*|\bмед\b|глюкоз\w*|фруктоз\w*|компот\w*|сироп\w*"),
     ("FISH", r"\bриба\b|\bрибн\w*|сьомга|есетра|\bтон\b|скумрия|пъстърва|хек\b"),
     ("CRUSTACEAN", r"скарид\w*|рак\w*|омар\w*"),
     ("MOLLUSC", r"миди|калмар\w*|октопод\w*"),
