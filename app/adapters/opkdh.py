@@ -157,12 +157,18 @@ class OpkdhAdapter(Adapter):
         r = await http.get(PAGE)
         r.raise_for_status()
         out: list[tuple[dt.date, str]] = []
-        for href in re.findall(r'href="([^"]*\.pdf[^"]*)"', r.text, re.I):
+        hrefs = re.findall(r'href="([^"]*\.pdf[^"]*)"', r.text, re.I)
+        for href in hrefs:
             url = href if href.startswith("http") else urllib.parse.urljoin(PAGE, href)
             name = urllib.parse.unquote(url.rsplit("/", 1)[-1])
             ws = _week_start(name)
             if ws:
                 out.append((ws, url))
+        # Same reasoning as Furisto: a page with no parseable PDF links is a
+        # failure, not an empty menu. Silently caching [] hides the source.
+        if not out:
+            raise RuntimeError(
+                f"no dated menu PDFs found ({len(hrefs)} pdf links in {len(r.text)} bytes)")
         return sorted(set(out))
 
     async def probe(self, http: httpx.AsyncClient) -> str:

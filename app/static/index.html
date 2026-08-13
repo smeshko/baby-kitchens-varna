@@ -93,6 +93,7 @@ button.chip[aria-pressed="true"]::before{background:rgba(255,255,255,.85)}
 }
 .kn::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--kc); flex:none}
 .kmeta{font-size:.68rem; color:var(--faint); margin-top:.2rem; font-weight:500; padding-left:1.1rem}
+.kerr{color:#a8433a}
 
 /* ---------- day ---------- */
 .dayhead{
@@ -177,16 +178,44 @@ a{color:var(--accent)}
 @media (max-width:980px){
   .wrap{padding:1.5rem 1rem 3rem}
   .kbar{display:none}
-  .row{grid-template-columns:1fr; gap:0}
-  .slot{padding:.9rem 1.15rem .1rem; display:flex; gap:.4rem; align-items:baseline}
-  .slot span{margin:0}
-  .cell{padding:.55rem 1.15rem .8rem}
-  .cell:last-child{padding-right:1.15rem}
-  .cell + .cell{border-top:1px solid var(--line); padding-top:.8rem}
-  .cell::before{
-    content:attr(data-k); display:flex; align-items:center; gap:.35rem;
-    font-size:.68rem; font-weight:700; color:var(--kc); margin-bottom:.3rem;
+
+  /* The day stops being one surface: each MEAL becomes its own card, so a day
+     reads as three groups instead of nine stacked blocks. Border rather than
+     shadow, because the day card must keep overflow:hidden for the collapse
+     animation and would clip it. */
+  .card{background:none; box-shadow:none; border-radius:0}
+  .card.is-today{box-shadow:none}
+  .row{
+    display:block; background:var(--surface); border:1px solid var(--edge);
+    border-radius:12px; margin-bottom:.65rem; overflow:hidden;
   }
+  .row:last-child{margin-bottom:.2rem}
+  .row + .row{border-top:1px solid var(--edge)}
+  .daysec:not(.collapsed) .card.is-today .row{border-color:color-mix(in srgb, var(--accent) 45%, var(--edge))}
+
+  /* meal header band */
+  .slot{
+    display:flex; align-items:center; gap:.4rem;
+    background:var(--surface-2); border-bottom:1px solid var(--edge);
+    padding:.48rem .9rem; font-size:.67rem; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--soft);
+  }
+  .slot span{margin:0; font-size:.67rem; font-weight:700}
+
+  /* one kitchen per block, keyed by a coloured edge */
+  .cell{padding:.7rem .9rem .8rem; border-left:3px solid var(--kc)}
+  .cell:last-child{padding-right:.9rem}
+  .cell + .cell{border-top:1px solid var(--line)}
+  .cell::before{
+    content:attr(data-kshort); display:block;
+    font-size:.66rem; font-weight:700; letter-spacing:.02em; color:var(--kc); margin-bottom:.25rem;
+  }
+  /* a kitchen with nothing that day collapses to a single quiet line */
+  .cell:has(> .dash){
+    display:flex; align-items:baseline; gap:.5rem; padding:.4rem .9rem;
+    opacity:.5; border-left-color:color-mix(in srgb, var(--kc) 35%, transparent);
+  }
+  .cell:has(> .dash)::before{margin-bottom:0}
 }
 @media (prefers-reduced-motion:no-preference){
   @keyframes rise{from{opacity:0; transform:translateY(5px)} to{opacity:1; transform:none}}
@@ -238,6 +267,8 @@ const AL = {
 };
 const ORDER = ["furisto","vipbebe","opkdh"];
 const KC = {furisto:"var(--k1)", vipbebe:"var(--k2)", opkdh:"var(--k3)"};
+// The full labels repeat 9x per day on mobile, where the column headers are gone.
+const KSHORT = {furisto:"Фуристо", vipbebe:"ВИП Бебе", opkdh:"ОПКДХ"};
 const SLOTS = [{n:1,t:"Супа"},{n:2,t:"Основно"},{n:3,t:"Десерт"}];
 const watch = new Set();
 let DATA = null, week = 0, visibleDates = [];
@@ -364,6 +395,9 @@ function render(){
     const meta=[];
     if(s?.coverage_note) meta.push(esc(s.coverage_note));
     if(s?.fetched_at) meta.push("обн. "+new Date(s.fetched_at).toLocaleString("bg-BG",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}));
+    // Show why a source is broken, not just that it is - this is the only place
+    // the reason surfaces without reading the server log.
+    if(s?.error) meta.push('<span class="kerr">'+esc(s.error.slice(0,160))+"</span>");
     h.appendChild(el("div","kmeta", meta.join(" · ")));
     kbar.appendChild(h);
   });
@@ -409,6 +443,7 @@ function render(){
         const c = el("div","cell");
         c.style.setProperty("--kc", KC[ORDER[ki]]);
         c.dataset.k = s ? s.label : ORDER[ki];
+        c.dataset.kshort = KSHORT[ORDER[ki]] || ORDER[ki];
         fillCell(c, slotMap(day)[slot.n], day, slot.n);
         row.appendChild(c);
       });

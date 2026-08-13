@@ -119,8 +119,9 @@ class FuristoAdapter(Adapter):
         r = await http.get(LISTING)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
+        anchors = soup.select("h6.o_wsale_products_item_title a[href]")
         out: list[dict] = []
-        for h in soup.select("h6.o_wsale_products_item_title a[href]"):
+        for h in anchors:
             title = re.sub(r"\s+", " ", h.get_text()).strip()
             m = _DATE.search(title)
             if not m:
@@ -133,6 +134,14 @@ class FuristoAdapter(Adapter):
                 "month": int(m.group(2)),
                 "extra": "Екстра" in title,
             })
+        # An unparseable listing must fail loudly. Returning [] here reads as "the
+        # shop has no menus", which the aggregator caches as a success - and since
+        # the probe hash of an empty parse is itself stable, the empty result then
+        # sticks forever. A bot challenge or markup change lands exactly here.
+        if not out:
+            raise RuntimeError(
+                f"listing yielded no dated products ({len(anchors)} product anchors in "
+                f"{len(r.text)} bytes) - markup changed, or the request was challenged")
         return out
 
     async def probe(self, http: httpx.AsyncClient) -> str:
