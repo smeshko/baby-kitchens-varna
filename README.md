@@ -29,6 +29,7 @@ additionally needs the `claude` CLI on PATH (or `codex`, see below).
 
 ```sh
 just run                # foreground, with reload
+just ocr-token          # mint the long-lived OCR token (once, see below)
 just install-service    # run in the background from login (launchd)
 just status             # is it up?
 just logs               # tail the log
@@ -37,9 +38,9 @@ just --list             # everything else
 ```
 
 `just install-service` renders `com.ivo.kitchen.plist.template` for this machine
-and loads it — the generated plist is gitignored, since it embeds absolute paths.
-Config knobs live in that template: `KITCHEN_PORT`, `KITCHEN_OCR_BACKEND`,
-`KITCHEN_WARM_SECONDS`, `KITCHEN_RELOAD`.
+and loads it — the generated plist is gitignored, since it embeds absolute paths
+and the OCR token. Config knobs live in that template: `KITCHEN_PORT`,
+`KITCHEN_OCR_BACKEND`, `KITCHEN_WARM_SECONDS`, `KITCHEN_RELOAD`.
 
 The background service hot-reloads: it watches `app/` and restarts in place on
 save, so edits go live without `just restart`. The watch is scoped to `app/`
@@ -101,6 +102,22 @@ Shells out to the local `claude -p` CLI, so it bills against the Claude
 subscription — no API key to store. Set `KITCHEN_OCR_BACKEND=codex` to use
 `codex exec` instead.
 
+**Under launchd it needs its own token.** The CLI keeps two credential stores: a
+login-Keychain entry and `~/.claude/.credentials.json`. An interactive
+`claude /login` can refresh only the file, while a launchd process reads the
+Keychain — so the service keeps using a session that stopped being refreshed and
+dies with `Failed to authenticate: OAuth session expired and could not be
+refreshed` once that copy's refresh token lapses. It fails *only* in the service:
+run the same command from a shell and it works, which makes it look like a PATH
+or environment problem. It is not.
+
+`just ocr-token` cuts the dependency on interactive logins: it runs
+`claude setup-token`, stores the long-lived token in the gitignored `.ocr-token`,
+and `just install-service` injects it into the plist as
+`CLAUDE_CODE_OAUTH_TOKEN`. Both files are mode 600. Without `.ocr-token` the
+service still installs — install-service drops the key and warns — and OCR falls
+back to the Keychain session, with the expiry above waiting for it.
+
 The image is split into overlapping tiles first: at 1414×2000 the long edge
 would be downscaled to 1568px and the ingredient print is small. **Each tile is
 written to its own directory** — these CLIs are agents, not OCR endpoints, and
@@ -122,4 +139,8 @@ OCR results are cached against the image's ETag, so this runs about once a week.
    (`10.08.-16.08.2026Г.` vs `17.08.- 23.08. 2026г.`), and the page still links
    a dead 2025 PDF. Date parsing is deliberately lenient and filters by window.
 2. VIP Bebe depends on OCR; the PNG is always linked in the UI as a fallback.
+   Its failures surface in `just logs`: the subprocess message now carries the
+   CLI's stdout, because both CLIs report auth and quota errors there and exit
+   with an empty stderr — a stderr-only report said `claude failed (1):` and
+   nothing else.
 3. Furisto depends on Odoo class names (`o_wsale_products_item_title`, `.oe_price`).

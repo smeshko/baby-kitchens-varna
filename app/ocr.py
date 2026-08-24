@@ -2,6 +2,7 @@
 
 Runs through the local `claude -p` CLI so it bills against the Claude
 subscription rather than an API key - nothing to configure, no secret to store.
+Under launchd that CLI needs CLAUDE_CODE_OAUTH_TOKEN; see the README.
 
 Runs at most once per week: VIP Bebe regenerates the PNG weekly and serves a
 stable ETag, so the adapter only calls this when that ETag moves.
@@ -138,7 +139,11 @@ async def _read_tile(path: Path, backend: str) -> dict:
         proc.kill()
         raise RuntimeError(f"{backend} timed out after {TIMEOUT}s") from None
     if proc.returncode != 0:
-        raise RuntimeError(f"{backend} failed ({proc.returncode}): {err.decode()[:300]}")
+        # Both CLIs report auth/quota failures on stdout and exit non-zero with an
+        # empty stderr, so a stderr-only message says nothing. Prefer whichever
+        # stream actually spoke.
+        detail = (err.decode().strip() or out.decode().strip() or "no output")
+        raise RuntimeError(f"{backend} failed ({proc.returncode}): {detail[:300]}")
     return _parse_json(out.decode())
 
 

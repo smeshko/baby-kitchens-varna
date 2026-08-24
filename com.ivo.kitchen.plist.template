@@ -32,6 +32,14 @@
         <!-- claude | codex -->
         <key>KITCHEN_OCR_BACKEND</key>
         <string>claude</string>
+        <!-- Long-lived OCR token from `claude setup-token`, injected by
+             `just install-service` from .ocr-token. Without it the CLI falls
+             back to the login Keychain, whose OAuth session is refreshed by
+             interactive `claude /login` only in ~/.claude/.credentials.json -
+             a launchd process reads the Keychain copy and fails once its
+             refresh token lapses. Both lines are dropped if .ocr-token is absent. -->
+        <key>CLAUDE_CODE_OAUTH_TOKEN</key>
+        <string>__OAUTH_TOKEN__</string>
         <!-- background revalidation interval, seconds -->
         <key>KITCHEN_WARM_SECONDS</key>
         <string>1800</string>
