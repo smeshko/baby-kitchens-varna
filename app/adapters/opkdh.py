@@ -1,13 +1,25 @@
 """ОПКДХ Варна - II група (1-3 години), обедно хранене.
 
-Weekly PDFs with a real text layer. Allergens are marked italic *and*
-underlined; the PDF legend says so outright ("включените в ястията възможни
-алергени са подчертани"). The two markings agree on 451/452 characters, so we
-read italics (cheap, via fontname) and keep the underline rects as a cross-check.
+Weekly PDFs with a real text layer, but a table layout the kitchen rewrites
+without warning. It shipped one row per dish (Ден | Ястия | Количество | Състав)
+with allergens in italics until 2026-08-17, then one row per *day* with
+супа/основно/десерт as columns, no italics at all, allergens in ALL CAPS plus an
+explicit "Алергени:" line. The structural parser read the new file as zero days
+and cached that silently.
+
+So the layout is not parsed here any more: the page is serialized to delimited
+text and handed to the LLM (`app/ocr.py`), which is told about all three marking
+conventions and returns the same day/item JSON the other sources produce. What
+stays structural is cheap and independently checkable: which PDFs are linked and
+which week each filename covers.
+
+Cost is bounded by content hash - a given PDF is sent once, ever, and the result
+is cached, so the weekly refresh is normally zero calls.
 """
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import io
 import re
 import urllib.parse
@@ -16,18 +28,21 @@ import httpx
 import pdfplumber
 
 from .. import allergens as alg
+from .. import cache, ocr
 from ..models import DayMenu, MenuItem
 from .base import Adapter
 
 PAGE = ("https://opkdhvarna.com/новина/седмично-меню-ii-група--от-1-3-години-обедно-хранене")
 
 # Filenames are hand-typed and inconsistent: "10.08.-16.08.2026Г." vs
-# "17.08.- 23.08. 2026г." - so the separator and spacing must both be lenient.
+# "17.08.- 23.08. 2026г." vs "24.08-30.08.2026_Меню_ДК_2гр_1.pdf" - so the
+# separator and spacing must both be lenient.
 _RANGE = re.compile(
     r"(\d{1,2})\s*\.\s*(\d{1,2})\s*\.?\s*-\s*(\d{1,2})\s*\.\s*(\d{1,2})\s*\.?\s*(\d{2,4})")
 
-_DISH = re.compile(r"^\s*([123])\s*[.．]\s*(.+)$", re.S)
-_RECIPE = re.compile(r"\s*[–-]\s*(?:рец\.?|р\.)\s*\d+\s*$")
+# A day cell carries a full date in the new layout ("24.8.2026"); the older one
+# numbered days only by position, so the year may have to come from the filename.
+_CELL_DATE = re.compile(r"(\d{1,2})\s*\.\s*(\d{1,2})(?:\s*\.\s*(\d{2,4}))?")
 
 
 def _week_start(filename: str) -> dt.date | None:
@@ -68,84 +83,88 @@ def _cell_runs(page, bbox) -> list[tuple[str, bool]]:
     return [(re.sub(r"\s+", " ", r[0]).strip(), r[1]) for r in runs if r[0].strip()]
 
 
-def _split_terms(text: str) -> list[str]:
-    # Bulgarian decimals use a comma ("мляко – 3,2%"), so shield them from the split.
-    shielded = re.sub(r"(\d),(\d)", "\\1\x00\\2", text)
-    parts = re.split(r"[,;]", shielded)
-    return [p.replace("\x00", ",").strip(" .–-") for p in parts if p.strip(" .–-\x00")]
+def pdf_text(data: bytes) -> str:
+    """Serialize page 1 as "cell | cell" rows, keeping any italic marking.
 
+    Italics were the allergen marking until the August 2026 rewrite dropped them
+    for ALL CAPS and an "Алергени:" line. Wrapping italic runs in asterisks costs
+    nothing when there are none, and means one prompt covers both files.
 
-def parse_pdf(data: bytes, week_start: dt.date, url: str) -> list[DayMenu]:
-    days: list[DayMenu] = []
+    Cell delimiters rather than pdfplumber's layout text: with three menu columns
+    the layout mode interleaves them into unreadable lines.
+    """
+    rows: list[str] = []
     with pdfplumber.open(io.BytesIO(data)) as pdf:
         page = pdf.pages[0]
-        tables = page.find_tables()
-        if not tables:
-            return []
-        rows = tables[0].rows
-        current: DayMenu | None = None
-        for row in rows:
-            cells = row.cells
-            # The "Ден" cell is vertically merged across a day's three dishes, so
-            # continuation rows have None there - that is normal, not a bad row.
-            if len(cells) < 4 or cells[1] is None or cells[3] is None:
-                continue
-            day_txt = " ".join(t for t, _ in _cell_runs(page, cells[0])) if cells[0] else ""
-            dish_runs = _cell_runs(page, cells[1])
-            qty_txt = " ".join(t for t, _ in _cell_runs(page, cells[2]))
-            comp_runs = _cell_runs(page, cells[3])
+        for table in page.find_tables():
+            for row in table.rows:
+                cells = []
+                for bbox in row.cells:
+                    # A vertically merged cell is None on its continuation rows.
+                    runs = _cell_runs(page, bbox) if bbox else []
+                    cells.append(" ".join(f"*{t}*" if ital else t for t, ital in runs))
+                if any(c.strip() for c in cells):
+                    rows.append(" | ".join(cells))
+        if not rows:
+            # No table at all is not automatically fatal - the kitchen could move
+            # to a plain-text layout - but an empty text layer means a scan, and
+            # this adapter has no vision path.
+            text = page.extract_text() or ""
+            if not text.strip():
+                raise ValueError("PDF page 1 has no table and no text layer")
+            rows.append(text)
+    return "\n".join(rows)
 
-            dish_txt = " ".join(t for t, _ in dish_runs).strip()
-            comp_txt = " ".join(t for t, _ in comp_runs).strip()
 
-            if day_txt.strip() in {"Ден"} or dish_txt.startswith("Ястия"):
-                continue
+def _parse_date(text: str, week_start: dt.date) -> dt.date | None:
+    m = _CELL_DATE.search(text)
+    if not m:
+        return None
+    d, mo, y = m.groups()
+    year = week_start.year if y is None else (int(y) if len(y) == 4 else 2000 + int(y))
+    try:
+        return dt.date(year, int(mo), int(d))
+    except ValueError:
+        return None
 
-            # A single Cyrillic letter in column 0 opens a new day. П and С are
-            # ambiguous (Пон/Пет, Сря/Съб) so days are assigned by order, not letter.
-            letter = day_txt.strip()
-            if len(letter) == 1 and letter in "ПВСЧН":
-                idx = len(days)
-                if idx > 6:
-                    break
-                current = DayMenu(
-                    kitchen="opkdh",
-                    date=week_start + dt.timedelta(days=idx),
-                    source_url=url,
-                )
-                days.append(current)
 
-            if current is None:
-                continue
+def _portion(value) -> str | None:
+    """"Грамаж:150" reaches us as "150"; the other kitchens print a unit."""
+    text = str(value or "").strip()
+    if not text:
+        return None
+    return f"{text} гр." if text.isdigit() else text
 
-            blob = f"{dish_txt} {comp_txt}"
-            if "ПОЧИВЕН" in blob.upper():
-                current.note = "Почивен ден"
-                continue
 
-            m = _DISH.match(dish_txt)
-            if not m:
-                continue
-            name = _RECIPE.sub("", m.group(2)).strip(" .–-")
-
-            # Runs break wherever the italics stop, i.e. at the separators between
-            # marked terms - so rejoin with a comma, not a space, or "краве масло"
-            # and "яйца" fuse into one bogus term.
-            marked = ", ".join(t for t, ital in comp_runs if ital)
-            marked_terms = _split_terms(marked)
-            tokens, printed = alg.classify_many(marked_terms)
-            ingredients = _split_terms(comp_txt)
+def to_days(raw_days: list[dict], week_start: dt.date, url: str) -> list[DayMenu]:
+    days: list[DayMenu] = []
+    for raw in raw_days:
+        date = _parse_date(str(raw.get("date", "")), week_start)
+        if date is None:
+            continue
+        items: list[MenuItem] = []
+        for it in raw.get("items", []):
+            ingredients = [str(x).strip() for x in it.get("ingredients", []) if str(x).strip()]
+            marked = [str(x).strip() for x in it.get("marked_ingredients", []) if str(x).strip()]
+            tokens, printed = alg.classify_many(marked)
             # Secondary sweep: catch anything the source forgot to mark.
             extra, _ = alg.classify_many(ingredients)
-
-            current.items.append(MenuItem(
-                position=int(m.group(1)),
-                name=re.sub(r"\s+", " ", name),
+            position = it.get("position")
+            items.append(MenuItem(
+                position=int(position) if str(position).isdigit() else None,
+                name=re.sub(r"\s+", " ", str(it.get("name", ""))).strip(),
                 ingredients=ingredients,
                 allergens=sorted(set(tokens) | set(extra)),
                 allergen_source_terms=printed,
-                portion=qty_txt.strip() or None,
+                portion=_portion(it.get("portion")),
             ))
+        days.append(DayMenu(
+            kitchen="opkdh",
+            date=date,
+            items=[i for i in items if i.name],
+            note=str(raw.get("note") or "").strip() or None,
+            source_url=url,
+        ))
     return days
 
 
@@ -182,5 +201,24 @@ class OpkdhAdapter(Adapter):
                 continue          # drops the stale 2025 PDF still linked on the page
             r = await http.get(url)
             r.raise_for_status()
-            days.extend(parse_pdf(r.content, ws, url))
-        return [d for d in days if start <= d.date <= end]
+
+            # Keyed on content, not filename: the kitchen re-uploads under new
+            # names, and a re-upload of identical bytes must not pay for a call.
+            key = hashlib.sha1(r.content).hexdigest()[:16]
+            cached = cache.read(f"opkdh-parse-{key}")
+            if cached is not None:
+                raw_days = cached["payload"]["days"]
+            else:
+                if not ocr.available():
+                    # Degrade, never fail: the PDF is linked in the UI and stays
+                    # readable by a human.
+                    days.append(DayMenu(
+                        kitchen="opkdh", date=max(ws, start), source_url=url,
+                        note=f"Няма {ocr.BACKEND} CLI — менюто се чете само от PDF",
+                    ))
+                    continue
+                raw_days = await ocr.read_menu_text(pdf_text(r.content), ws)
+                cache.write(f"opkdh-parse-{key}", key, {"days": raw_days})
+
+            days.extend(to_days(raw_days, ws, url))
+        return sorted((d for d in days if start <= d.date <= end), key=lambda d: d.date)

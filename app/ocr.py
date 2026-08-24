@@ -1,4 +1,9 @@
-"""Vision OCR for the one source that publishes its menu only as an image.
+"""LLM extraction of the two menus that resist a fixed parser.
+
+Two callers, one CLI: `read_menu_image` for VIP Bebe (published only as a PNG)
+and `read_menu_text` for OPKDH (a PDF with a real text layer, but a table layout
+the kitchen rewrites without warning - it went from one-row-per-dish to
+one-row-per-day mid-August 2026 and silently produced zero days).
 
 Runs through the local `claude -p` CLI so it bills against the Claude
 subscription rather than an API key - nothing to configure, no secret to store.
@@ -47,6 +52,40 @@ Rules:
 """
 
 
+TEXT_PROMPT = """Below is the text of a weekly menu from a Bulgarian children's kitchen,
+extracted from a PDF. Cells are separated by " | " and rows by newlines.
+
+Return ONLY valid JSON - no prose, no explanation:
+
+{{"days":[{{"date":"DD.MM.YYYY","note":null,"items":[{{"position":1,"name":"...",
+"portion":"...","ingredients":["..."],"marked_ingredients":["..."]}}]}}]}}
+
+Rules:
+- This menu covers the week beginning Monday {week_start}.
+- One entry per day actually present. "date" is that day's date. If the source
+  prints no dates and marks days only by letter or name (Ден: П, В, С, Ч, П, С, Н),
+  assign consecutive dates from that Monday, in printed order.
+- "position" is 1 for the soup, 2 for the main course, 3 for the dessert. Use the
+  column heading (Супа / Основно / Десерт) or the number printed before the dish.
+- "name" is the dish only: drop the recipe number ("- р.76", "рец. 208").
+- "ingredients" is the Състав list, split per item. Drop the "Състав:" label.
+- "marked_ingredients" contains ONLY ingredients the source marks as allergens.
+  A source marks them in one of three ways - use whichever appears:
+    * ALL CAPS inside the composition (ПШЕНИЧНО БРАШНО, ЯЙЦА)
+    * wrapped in asterisks like *this* (italics in the original PDF)
+    * named on an "Алергени:" line - in that case copy the matching ingredient
+      as printed in Състав, not the word from the Алергени line.
+  Empty list if the source marks nothing. Do not guess from your own knowledge.
+- "portion" is the Грамаж value if present, else null. "note" is for a day with
+  no food (e.g. "Почивен ден"), else null.
+- Transcribe the Bulgarian exactly as printed. Do not translate or rephrase.
+- Do not invent days, dishes or ingredients.
+
+--- MENU TEXT ---
+{text}
+"""
+
+
 # Both CLIs work. claude -p is the default: on this workload it was ~3.5x faster
 # and returned exactly the tile it was given, whereas codex explored the working
 # directory and transcribed a different image that happened to be there - hence
@@ -55,11 +94,23 @@ BACKEND = os.environ.get("KITCHEN_OCR_BACKEND", "claude").lower()
 
 
 def _argv(backend: str, path: Path) -> tuple[list[str], str | None]:
-    """Returns (argv, stdin_text)."""
+    """Returns (argv, stdin_text) for reading an image off disk."""
     if backend == "codex":
         return (["codex", "exec", "--skip-git-repo-check", "-i", str(path), "-"],
                 PROMPT.format(path=path))
     return (["claude", "-p", PROMPT.format(path=path), "--allowedTools", "Read"], None)
+
+
+def _text_argv(backend: str, prompt: str) -> tuple[list[str], str | None]:
+    """Returns (argv, stdin_text) for a prompt that carries its own text.
+
+    The menu text is inlined rather than written to a file: it is a few KB, well
+    under ARG_MAX, and it means no tool access has to be granted at all - which
+    also sidesteps the agent-reads-a-neighbouring-file trap described below.
+    """
+    if backend == "codex":
+        return (["codex", "exec", "--skip-git-repo-check", "-"], prompt)
+    return (["claude", "-p", prompt], None)
 
 
 def available(backend: str | None = None) -> bool:
@@ -125,12 +176,15 @@ def _parse_json(text: str) -> dict:
 
 
 async def _read_tile(path: Path, backend: str) -> dict:
-    argv, stdin_text = _argv(backend, path)
+    return _parse_json(await _run(*_argv(backend, path), cwd=path.parent, backend=backend))
+
+
+async def _run(argv: list[str], stdin_text: str | None, cwd: Path, backend: str) -> str:
     proc = await asyncio.create_subprocess_exec(
         *argv,
         stdin=asyncio.subprocess.PIPE if stdin_text else asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-        cwd=str(path.parent),          # its own directory: nothing else is visible
+        cwd=str(cwd),                  # its own directory: nothing else is visible
     )
     try:
         out, err = await asyncio.wait_for(
@@ -144,7 +198,26 @@ async def _read_tile(path: Path, backend: str) -> dict:
         # stream actually spoke.
         detail = (err.decode().strip() or out.decode().strip() or "no output")
         raise RuntimeError(f"{backend} failed ({proc.returncode}): {detail[:300]}")
-    return _parse_json(out.decode())
+    return out.decode()
+
+
+async def read_menu_text(text: str, week_start, backend: str | None = None) -> list[dict]:
+    """Returns raw day dicts as described in TEXT_PROMPT. Raises on failure.
+
+    One call per document - unlike the image path there is nothing to tile, so a
+    partial answer cannot be papered over by a second tile. A reply with no days
+    is an error: this source always has days, and silently returning [] is
+    exactly how the layout change went unnoticed for a week.
+    """
+    backend = (backend or BACKEND).lower()
+    argv, stdin_text = _text_argv(
+        backend, TEXT_PROMPT.format(text=text, week_start=week_start.isoformat()))
+    with tempfile.TemporaryDirectory(prefix="kitchen-pdf-") as tmp:
+        reply = await _run(argv, stdin_text, cwd=Path(tmp), backend=backend)
+    days = _parse_json(reply).get("days", [])
+    if not days:
+        raise ValueError("reply contained no days")
+    return days
 
 
 async def read_menu_image(data: bytes, backend: str | None = None) -> list[dict]:

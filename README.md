@@ -84,9 +84,11 @@ only the *normalisation* is shared (`app/allergens.py`):
 
 - **Фуристо** — ALL CAPS in the ingredient list (`ЦЕЛИНА`, `ЯЙЦА`)
 - **ВИП Бебе** — bold, which the OCR prompt is told to preserve
-- **ОПКДХ** — italic *and* underlined; the PDF legend says so outright, and the
-  two markings agree on 451/452 characters, so italics are read via font name
-  and the underline rects act as a cross-check
+- **ОПКДХ** — moving target. It was italic *and* underlined (the PDF legend said
+  so outright, and the two agreed on 451/452 characters); since 2026-08-24 the
+  file has no italics at all and marks allergens in ALL CAPS plus a per-dish
+  `Алергени:` line. The extraction prompt is told about all three conventions
+  and uses whichever the file actually contains.
 
 A secondary lexicon sweep runs over unmarked ingredients to catch marking
 mistakes (it already found one: `Крем ванилия` has un-italicised `прясно мляко`).
@@ -126,6 +128,30 @@ working directory rather than the tile it was asked for.
 
 OCR results are cached against the image's ETag, so this runs about once a week.
 
+### Reading the OPKDH PDF
+
+Same CLI, no vision: the PDF has a real text layer, so `pdf_text()` serialises
+page 1 to `cell | cell` rows and `ocr.read_menu_text` asks the model for the same
+day/item JSON. Italic runs are wrapped in `*asterisks*` on the way out, so the
+pre-August marking survives into plain text and one prompt covers both layouts.
+
+This replaced a structural table parser, because the layout is not stable: the
+kitchen went from one row per dish (`Ден | Ястия | Количество | Състав`) to one
+row per **day** with супа/основно/десерт as columns, and the parser read the new
+file as zero days — silently, since an empty parse looked exactly like an empty
+menu. What is still parsed structurally is only what is cheap and checkable:
+which PDFs are linked, and which week each *filename* covers.
+
+Results are cached on a hash of the PDF bytes, so any given file is sent once
+ever and the weekly refresh normally costs no calls at all. Note that this cache
+is keyed on the source, not on the parser — after changing extraction, delete
+`~/.cache/kitchen-menus/opkdh-*.json` or the unchanged change-key will keep
+serving the old result.
+
+Verified against the last italic-format PDF: identical to the structural parser
+on all 7 days, except that it correctly splits `сметана олио` — two ingredients
+the kitchen forgot to comma-separate — which the old parser fused into one.
+
 ## Coverage
 
 - **ВИП Бебе publishes only the current week** — verified: its second image is
@@ -136,11 +162,16 @@ OCR results are cached against the image's ETag, so this runs about once a week.
 ## Known fragilities
 
 1. OPKDH filenames are hand-typed and already inconsistent
-   (`10.08.-16.08.2026Г.` vs `17.08.- 23.08. 2026г.`), and the page still links
-   a dead 2025 PDF. Date parsing is deliberately lenient and filters by window.
-2. VIP Bebe depends on OCR; the PNG is always linked in the UI as a fallback.
-   Its failures surface in `just logs`: the subprocess message now carries the
-   CLI's stdout, because both CLIs report auth and quota errors there and exit
-   with an empty stderr — a stderr-only report said `claude failed (1):` and
-   nothing else.
+   (`10.08.-16.08.2026Г.` vs `17.08.- 23.08. 2026г.` vs
+   `24.08-30.08.2026_Меню_ДК_2гр_1.pdf`), and the page still links a dead 2025
+   PDF. Date parsing is deliberately lenient and filters by window. This is now
+   the *only* structural assumption left in that adapter, and a filename with no
+   parseable range is dropped — if every link stops parsing the source fails
+   loudly rather than reporting an empty menu.
+2. Both VIP Bebe and OPKDH now depend on the `claude` CLI, so one expired login
+   takes out two of the three kitchens. VIP Bebe still links the PNG and OPKDH
+   still links the PDF, so both stay human-readable when that happens. The
+   failure is at least legible: the subprocess message carries the CLI's stdout,
+   because both CLIs report auth and quota errors there and exit with an empty
+   stderr — a stderr-only report said `claude failed (1):` and nothing else.
 3. Furisto depends on Odoo class names (`o_wsale_products_item_title`, `.oe_price`).
