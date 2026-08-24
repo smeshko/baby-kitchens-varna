@@ -12,6 +12,9 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "pillow>=10.0",
     "pydantic>=2.7",
+    # uvicorn --reload falls back to polling every file under the tree (.venv
+    # included) without this; watchfiles makes it an fsevents subscription.
+    "watchfiles>=0.21",
 ]
 
 [tool.uv]

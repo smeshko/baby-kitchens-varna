@@ -3,7 +3,8 @@ set shell := ["bash", "-uc"]
 port     := env_var_or_default("KITCHEN_PORT", "8787")
 label    := "com.ivo.kitchen"
 plist    := env_var("HOME") / "Library/LaunchAgents" / label + ".plist"
-logfile  := env_var("HOME") / "Library/Logs/kitchen.log"
+# Shared with the other local services started from ~/Developer/start-services.sh.
+logfile  := env_var("HOME") / "Developer/logs/kitchen.log"
 cachedir := env_var("HOME") / ".cache/kitchen-menus"
 
 _default:

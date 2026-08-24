@@ -39,10 +39,19 @@ just --list             # everything else
 `just install-service` renders `com.ivo.kitchen.plist.template` for this machine
 and loads it — the generated plist is gitignored, since it embeds absolute paths.
 Config knobs live in that template: `KITCHEN_PORT`, `KITCHEN_OCR_BACKEND`,
-`KITCHEN_WARM_SECONDS`.
+`KITCHEN_WARM_SECONDS`, `KITCHEN_RELOAD`.
 
-Note that the background service does not hot-reload: after changing anything
-under `app/`, run `just restart`.
+The background service hot-reloads: it watches `app/` and restarts in place on
+save, so edits go live without `just restart`. The watch is scoped to `app/`
+because the default root is the whole project, `.venv` included. A reload drops
+the in-memory cache and re-warms (~20s of upstream probes), so set
+`KITCHEN_RELOAD=0` in the plist to pin the process instead. `just restart` is
+still needed for changes outside `app/` — `run.sh`, the plist, dependencies.
+
+On this machine the service is started by launchd, not by
+`~/Developer/start-services.sh`; that script only bootstraps the agent if it is
+not loaded. The log is shared with the other local services at
+`~/Developer/logs/kitchen.log`.
 
 ## How it works
 

@@ -35,6 +35,9 @@
         <!-- background revalidation interval, seconds -->
         <key>KITCHEN_WARM_SECONDS</key>
         <string>1800</string>
+        <!-- watch app/ and restart in place on edit; 0 pins the process -->
+        <key>KITCHEN_RELOAD</key>
+        <string>1</string>
     </dict>
 </dict>
 </plist>
